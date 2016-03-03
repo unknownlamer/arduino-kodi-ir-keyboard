@@ -24,39 +24,34 @@ SOFTWARE.
 
 /* IR to USB keyboard optimized for KODI openELEC running on Asus Chromebox.
  * IR device: Logitech Harmony 880 with remote profile: 'Plex Player'
- * Tested with MattairTech MT-DB-U4 (ATmega 32U4), 16MHZ 5V, CDC_HID
+ * Tested with SparkFun Pro Micro, ATmega32u4 (5V, 16MHz)
  * 
  * Initial proof of concept: 
  * - Kodi control works pretty well already :-)
  * - key repeat works
+ * - boot protocol mode works (tested on a MacMini)
+ * 
+ * ISSUES:
+ * - Sketch doesn't always start after power up!? 
+ *   Needs more testing...
  * 
  * TODO:
  * - Power off / sleep / wakeup
- * - CTRL+D / CTRL+W key combinations for boot selection 
- * - Test if boot protocol mode HID modification is required 
- *   Required change: hardware/arduino/cores/arduino/HID.cpp
-extern const HIDDescriptor _hidInterface PROGMEM;
-const HIDDescriptor _hidInterface =
-{
-// D_INTERFACE(HID_INTERFACE,1,3,0,0),
-  D_INTERFACE(HID_INTERFACE,1,3,1,1),
-  D_HIDREPORT(sizeof(_hidReportDescriptor)),
-  D_ENDPOINT(USB_ENDPOINT_IN (HID_ENDPOINT_INT),USB_ENDPOINT_TYPE_INTERRUPT,0x40,0x01)
-};
+ * - CTRL+D / CTRL+W key combinations for boot selection on the Asus Chromebox
  * - Chromebox hardware modification to control power toggle switch with Arduino
  */
 
-#include <Keyboard.h>
+#include <HID-Project.h>
 #include <IRremote.h>
 
 // --------CONSTANTS ---------------
 
 // pin assignments
-#define RECV_PIN 20
+#define RECV_PIN 7
 
 struct CodeMap {
-  unsigned long irCode;
-  uint8_t       keyCode;
+  unsigned long   irCode;
+  KeyboardKeycode keyCode;
 };
 
 // Logitech "Plex Player" device as KODI remote
@@ -124,40 +119,40 @@ const int KEY_PRESS_TIME = 150;
 const CodeMap irToKeyMap[] = {
   {IR_LEFT  , KEY_LEFT_ARROW},
   {IR_RIGHT , KEY_RIGHT_ARROW},
-  {IR_UP    , KEY_UP_ARROW},
+  {IR_UP    , HID_KEYBOARD_UPARROW},
   {IR_DOWN  , KEY_DOWN_ARROW},
   {IR_OK    , KEY_RETURN},
   {IR_ENTER , KEY_TAB},  // Fullscreen playback
-  {IR_MENU  , 'c'},
+  {IR_MENU  , KEY_C},
   {IR_EXIT  , KEY_ESC},
   {IR_F8    , KEY_BACKSPACE},
-  {IR_GUIDE , 'e'},
-  {IR_INFO  , 'i'},
-  {IR_STOP  , 'x'},
-  {IR_PLAY  , 'p'},
-  {IR_PAUSE , ' '},
-  {IR_REC   , 'b'},
-  {IR_REW   , 'r'},
-  {IR_FWD   , 'f'},
-  {IR_PREV, '\''},
-  {IR_SKIP  , '.'},
-  {IR_REPLAY, ','},
+  {IR_GUIDE , KEY_E},
+  {IR_INFO  , KEY_I},
+  {IR_STOP  , KEY_X},
+  {IR_PLAY  , KEY_P},
+  {IR_PAUSE , KEY_SPACE},
+  {IR_REC   , KEY_B},
+  {IR_REW   , KEY_R},
+  {IR_FWD   , KEY_F},
+  {IR_PREV  , KEY_QUOTE}, // FIXME doesn't seem to work with non-us keyboard layout
+  {IR_SKIP  , KEY_PERIOD},
+  {IR_REPLAY, KEY_COMMA},
   {IR_PGDOWN, KEY_PAGE_DOWN},
   {IR_PGUP  , KEY_PAGE_UP},
-  {IR_BLUE  , 't'},      // toggle subtitles 
-  {IR_RED   , 'w'},      // Marked as watched / unwatched
-  {IR_GREEN , 's'},      // Shutdown menu
+  {IR_BLUE  , KEY_T},      // toggle subtitles 
+  {IR_RED   , KEY_W},      // Marked as watched / unwatched
+  {IR_GREEN , KEY_S},      // Shutdown menu
   {IR_YELLOW, KEY_DELETE},
-  {IR_1     , '1'},
-  {IR_2     , '2'},
-  {IR_3     , '3'},
-  {IR_4     , '4'},
-  {IR_5     , '5'},
-  {IR_6     , '6'},
-  {IR_7     , '7'},
-  {IR_8     , '8'},
-  {IR_9     , '9'},
-  {IR_0     , '0'},
+  {IR_1     , KEY_1},
+  {IR_2     , KEY_2},
+  {IR_3     , KEY_3},
+  {IR_4     , KEY_4},
+  {IR_5     , KEY_5},
+  {IR_6     , KEY_6},
+  {IR_7     , KEY_7},
+  {IR_8     , KEY_8},
+  {IR_9     , KEY_9},
+  {IR_0     , KEY_0},
 
 // TODO:
 // CTRL + D -> boot ChromeOS
@@ -182,7 +177,7 @@ void setup() {
   Serial.println("Chromebox_IR_USB_Keyboard");
 
   // initialize control over the keyboard:
-  Keyboard.begin();
+  BootKeyboard.begin();
   
   // Start the receiver
   irrecv.enableIRIn();
@@ -208,15 +203,16 @@ void loop() {
         if (irToKeyMap[i].irCode == results.value) {
             // only press key if not yet pressed
             if (timeKeyDown == 0) {
-              Serial.print(millis()); Serial.print(" Press key: "); Serial.println(irToKeyMap[i].keyCode, HEX);
-              Keyboard.press(irToKeyMap[i].keyCode);              
+              KeyboardKeycode keyCode = irToKeyMap[i].keyCode;
+              Serial.print(millis()); Serial.print(" Press key: 0x"); Serial.println(keyCode, HEX);
+              BootKeyboard.press(keyCode);              
             }
             timeKeyDown = millis();
             break;
         }
       }
 
-      Serial.print(millis()); Serial.print(" IR: "); Serial.println(results.value, HEX);
+      Serial.print(millis()); Serial.print(" IR: 0x"); Serial.println(results.value, HEX);
 
       irrecv.resume(); // restarts decoding state machine
     } else {
@@ -231,7 +227,7 @@ void loop() {
 
 void releaseKeys() {
     timeKeyDown = 0;
-    Keyboard.releaseAll();
+    BootKeyboard.releaseAll();
     Serial.print(millis()); Serial.println(" Release keys");   
 }
 
