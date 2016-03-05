@@ -24,7 +24,13 @@ SOFTWARE.
 
 /* IR to USB keyboard optimized for KODI openELEC running on Asus Chromebox.
  * IR device: Logitech Harmony 880 with remote profile: 'Plex Player'
- * Tested with SparkFun Pro Micro, ATmega32u4 (5V, 16MHz)
+ * Testing with: 
+ * - SparkFun Pro Micro, ATmega32u4 (5V, 16MHz)
+ * - MattairTech MT-DB-U4 (ATmega 32U4), 16MHZ 5V, CDC_HID
+ * 
+ * Arduino IDE 1.6.7
+ * HID Project 2.4.3
+ * IRRemote 2.0.1
  * 
  * Initial proof of concept: 
  * - Kodi control works pretty well already :-)
@@ -32,22 +38,35 @@ SOFTWARE.
  * - boot protocol mode works (tested on a MacMini)
  * 
  * ISSUES:
- * - Sketch doesn't always start after power up!? 
- *   Needs more testing...
+ * - Stability issues: program hangs within 0..60 minutes 
+ *   (Watch dog reset didn't work either, according to Google this is most likely a bootloader bug)
  * 
  * TODO:
+ * - Stable operation: continue testing with an Arduino Leonardo
  * - Power off / sleep / wakeup
  * - CTRL+D / CTRL+W key combinations for boot selection on the Asus Chromebox
  * - Chromebox hardware modification to control power toggle switch with Arduino
  */
 
+#ifdef WATCHDOG
+  #include <avr/wdt.h>
+#endif
+
+// hack for MattairTech MT-DB-U4 1.6.9-mt1
+#ifndef USB_EP_SIZE
+ #define USB_EP_SIZE USB_DEFAULT_EP_SIZE
+#endif
+
 #include <HID-Project.h>
 #include <IRremote.h>
+
+//#define DEBUG_SKETCH
+#include "Debug.h"
 
 // --------CONSTANTS ---------------
 
 // pin assignments
-#define RECV_PIN 7
+#define RECV_PIN 20
 
 struct CodeMap {
   unsigned long   irCode;
@@ -173,19 +192,45 @@ unsigned long timeKeyDown = 0;  // time of key press initiation
 
 void setup() {                
   // open debug console
+  #ifndef DEBUG
   Serial.begin(115200);  // afaik the baudrate is ignored on a 32u4
-  Serial.println("Chromebox_IR_USB_Keyboard");
+  #endif
+  DEBUG_PRINTLN("Chromebox_IR_USB_Keyboard");
 
   // initialize control over the keyboard:
   BootKeyboard.begin();
   
   // Start the receiver
   irrecv.enableIRIn();
+
+#ifdef WATCHDOG
+  // enable watch dog 
+  // maybe this solves the frequent hangs on the Pro Micro...
+  wdt_enable(WDTO_1S);
+#endif
 }
 
 //========================================
 
 void loop() {
+#ifdef WATCHDOG  
+    //Test if watchdog interrupt enabled
+    // http://forum.arduino.cc/index.php?topic=295345.msg2628807#msg2628807
+    if (WDTCSR & (1<<WDIE)) {   
+        //Prolong wtachdog timer
+        wdt_reset();
+    }
+    //No interrupt enabled - Test if watchdog reset enabled
+    else if (WDTCSR & (1<<WDE)) {
+        //Bootloader about to reset - do not prolong watchdog
+    }
+    //It has ben disabled - Enable and prolong
+    else {
+        //Watchdog disabled - Enable again
+        wdt_enable(WDTO_1S);
+    }
+#endif
+
     if (irrecv.decode(&results) && results.decode_type == NEC) {
       // check if it's a NEC repeat code
       if (results.value == 0xFFFFFFFF) {
@@ -204,7 +249,7 @@ void loop() {
             // only press key if not yet pressed
             if (timeKeyDown == 0) {
               KeyboardKeycode keyCode = irToKeyMap[i].keyCode;
-              Serial.print(millis()); Serial.print(" Press key: 0x"); Serial.println(keyCode, HEX);
+              DEBUG_PRINT(millis()); DEBUG_PRINT(" Press key: 0x"); DEBUG_PRINTLN(keyCode, HEX);
               BootKeyboard.press(keyCode);              
             }
             timeKeyDown = millis();
@@ -212,7 +257,7 @@ void loop() {
         }
       }
 
-      Serial.print(millis()); Serial.print(" IR: 0x"); Serial.println(results.value, HEX);
+      DEBUG_PRINT(millis()); DEBUG_PRINT(" IR: 0x"); DEBUG_PRINTLN(results.value, HEX);
 
       irrecv.resume(); // restarts decoding state machine
     } else {
@@ -228,6 +273,6 @@ void loop() {
 void releaseKeys() {
     timeKeyDown = 0;
     BootKeyboard.releaseAll();
-    Serial.print(millis()); Serial.println(" Release keys");   
+    DEBUG_PRINT(millis()); DEBUG_PRINTLN(" Release keys");   
 }
 
