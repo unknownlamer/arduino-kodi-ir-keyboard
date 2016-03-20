@@ -31,7 +31,7 @@ const IRType irType = IR_PANASONIC;
 #define IR_PANA_YELLOW       0xF2720080
 #define IR_PANA_SUBTITLE     0x84050180
 #define IR_PANA_POWER_ON     0xBE3E0080
-#define IR_PANA_POWER_OFF    0xBD3D0080
+#define IR_PANA_POWER_OFF    0xBF3F0080
 #define IR_PANA_RIGHT        0xCF4F0080
 #define IR_PANA_LEFT         0xCE4E0080
 #define IR_PANA_INFO         0xB9390080
@@ -39,20 +39,31 @@ const IRType irType = IR_PANASONIC;
 #define IR_PANA_REPLAY       0x55DC0980
 #define IR_PANA_SKIP         0x54DD0980
 #define IR_PANA_ASPECT       0x5ADE0480
-#define IR_PANA_GUIDE        0xE870980
+#define IR_PANA_GUIDE        0x0E870980
 #define IR_PANA_MENU         0xD2520080
 #define IR_PANA_EXIT         0x139A0980
 #define IR_PANA_HOME         0x1C950980
 #define IR_PANA_OK           0xC9490080
 #define IR_PANA_UP           0xCA4A0080
 #define IR_PANA_DOWN         0xCB4B0080
+#define IR_PANA_TV           0xB2300280
+#define IR_PANA_APPS         0x068F0980
+#define IR_PANA_AV           0x85050080
+#define IR_PANA_HDMI1        0x34B00480
+#define IR_PANA_HDMI2        0x35B10480
+#define IR_PANA_HDMI3        0x36B20480
+#define IR_PANA_VIDEO1       0x81010080
+#define IR_PANA_VIDEO2       0x82020080
+#define IR_PANA_TELETEXT     0x82030180
+#define IR_PANA_MEDIAPLAYER  0x22AB0980
+
 
 // Standard Logitech 880 buttons
 #define REMOTE_MUTE         IR_PANA_MUTE
 #define REMOTE_VOL_UP       IR_PANA_VOL_UP
 #define REMOTE_VOL_DOWN     IR_PANA_VOL_DOWN
-#define REMOTE_PG_DOWN      0
-#define REMOTE_PG_UP        0
+#define REMOTE_ARROW_DOWN   IR_PANA_VIDEO1
+#define REMOTE_ARROW_UP     IR_PANA_VIDEO2
 #define REMOTE_CH_DOWN      IR_PANA_CH_DOWN
 #define REMOTE_CH_UP        IR_PANA_CH_UP
 #define REMOTE_PREV         IR_PANA_PREV
@@ -82,19 +93,27 @@ const IRType irType = IR_PANASONIC;
 #define REMOTE_7            IR_PANA_7
 #define REMOTE_8            IR_PANA_8
 #define REMOTE_9            IR_PANA_9
-#define REMOTE_PLUS         0
 #define REMOTE_0            IR_PANA_0
-#define REMOTE_ENTER        0
+#define REMOTE_ENTER        IR_PANA_APPS
 
 // Additional buttons
 #define REMOTE_POWER_TOGGLE IR_PANA_POWER_TOGGLE
 #define REMOTE_POWER_ON     IR_PANA_POWER_ON
 #define REMOTE_POWER_OFF    IR_PANA_POWER_OFF
-#define REMOTE_BACK         IR_PANA_BACK
+#define REMOTE_CLEAR        IR_PANA_BACK
 #define REMOTE_RED          IR_PANA_RED
 #define REMOTE_GREEN        IR_PANA_GREEN
 #define REMOTE_YELLOW       IR_PANA_YELLOW
 #define REMOTE_BLUE         IR_PANA_BLUE
 #define REMOTE_SUBTITLE     IR_PANA_SUBTITLE
-#define REMOTE_ASPECT       IR_PANA_ASPECT
+#define REMOTE_ASPECT       IR_PANA_MEDIAPLAYER
+
+#define REMOTE_F1           IR_PANA_AV
+#define REMOTE_F2           IR_PANA_HDMI2
+#define REMOTE_F3           IR_PANA_HDMI1
+#define REMOTE_F4           IR_PANA_HDMI3
+#define REMOTE_F5           IR_PANA_TELETEXT
+#define REMOTE_F6           IR_PANA_ASPECT
+#define REMOTE_F7           IR_PANA_HOME
+#define REMOTE_F8           IR_PANA_TV
 

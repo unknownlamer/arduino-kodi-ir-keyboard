@@ -1,5 +1,6 @@
 const IRType irType = IR_SONY12;
 
+// The Sony device was just used for testing the device specific IR codes abstraction
 #define IR_SONY_1            0x0000
 #define IR_SONY_2            0x0001
 #define IR_SONY_3            0x0002
@@ -48,8 +49,8 @@ const IRType irType = IR_SONY12;
 #define REMOTE_MUTE         IR_SONY_MUTE
 #define REMOTE_VOL_UP       IR_SONY_VOL_UP
 #define REMOTE_VOL_DOWN     IR_SONY_VOL_DOWN
-#define REMOTE_PG_DOWN      0
-#define REMOTE_PG_UP        0
+#define REMOTE_ARROW_DOWN   IR_SONY_SUBTITLE
+#define REMOTE_ARROW_UP     0
 #define REMOTE_CH_DOWN      IR_SONY_CH_DOWN
 #define REMOTE_CH_UP        IR_SONY_CH_UP
 #define REMOTE_PREV         IR_SONY_PREV
@@ -79,7 +80,6 @@ const IRType irType = IR_SONY12;
 #define REMOTE_7            IR_SONY_7
 #define REMOTE_8            IR_SONY_8
 #define REMOTE_9            IR_SONY_9
-#define REMOTE_PLUS         0
 #define REMOTE_0            IR_SONY_0
 #define REMOTE_ENTER        IR_SONY_SYNC_MENU
 
@@ -87,11 +87,20 @@ const IRType irType = IR_SONY12;
 #define REMOTE_POWER_TOGGLE IR_SONY_POWER_TOGGLE
 #define REMOTE_POWER_ON     IR_SONY_POWER_ON
 #define REMOTE_POWER_OFF    IR_SONY_POWER_OFF
-#define REMOTE_BACK         IR_SONY_BACK
+#define REMOTE_CLEAR        IR_SONY_BACK
 #define REMOTE_RED          IR_SONY_RED
 #define REMOTE_GREEN        IR_SONY_GREEN
 #define REMOTE_YELLOW       IR_SONY_YELLOW
 #define REMOTE_BLUE         IR_SONY_BLUE
 #define REMOTE_SUBTITLE     IR_SONY_SUBTITLE
 #define REMOTE_ASPECT       0
+
+#define REMOTE_F1           0
+#define REMOTE_F2           0
+#define REMOTE_F3           0
+#define REMOTE_F4           0
+#define REMOTE_F5           0
+#define REMOTE_F6           0
+#define REMOTE_F7           0
+#define REMOTE_F8           0
 
