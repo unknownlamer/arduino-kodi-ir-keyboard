@@ -1,5 +1,4 @@
 # arduino-kodi-ir-keyboard
-(IRLremote + BootKeyboard branch)
  
 Kodi optimized infrared USB keyboard for an Asus Chromebox running openELEC.
 
