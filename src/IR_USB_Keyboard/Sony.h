@@ -1,4 +1,5 @@
-const IRType irType = IR_SONY12;
+
+const decode_type_t  irType = SONY;
 
 // The Sony device was just used for testing the device specific IR codes abstraction
 #define IR_SONY_1            0x0000
@@ -103,4 +104,3 @@ const IRType irType = IR_SONY12;
 #define REMOTE_F6           0
 #define REMOTE_F7           0
 #define REMOTE_F8           0
-

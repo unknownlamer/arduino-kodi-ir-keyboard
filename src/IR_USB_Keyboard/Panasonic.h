@@ -1,10 +1,10 @@
 
-const IRType irType = IR_PANASONIC;
+const decode_type_t  irType = PANASONIC;
 
 // address: 0x2002
-#define IR_PANA_1            0x90100080
-#define IR_PANA_2            0x91110080
-#define IR_PANA_3            0x92120080
+#define IR_PANA_1            0x9C174262
+#define IR_PANA_2            0x757FB4DF
+#define IR_PANA_3            0xB33B4597
 #define IR_PANA_4            0x93130080
 #define IR_PANA_5            0x94140080
 #define IR_PANA_6            0x95150080
@@ -116,4 +116,3 @@ const IRType irType = IR_PANASONIC;
 #define REMOTE_F6           IR_PANA_ASPECT
 #define REMOTE_F7           IR_PANA_HOME
 #define REMOTE_F8           IR_PANA_TV
-

@@ -23,35 +23,66 @@ SOFTWARE.
 */
 
 /* IR to USB keyboard optimized for KODI openELEC running on Asus Chromebox.
- * IR device: Logitech Harmony 880 with remote profile: 'Panasonic TV TX-43CXW754'
+ * IR device: Logitech Harmony 880 with remote profile: 'Intel NUC IntelD54250WYK'
+ * 
+ * DEVELOPMENT BRANCH for MCE remotes with RC6 IR protocol.
+ * Uses IRremote library instead of IRLremote for RC6 protocol.
  * 
  * Tested with: 
- * - Arduino Leonardo & SparkFun Pro Micro, ATmega32u4 (5V, 16MHz)
- * - Arduino IDE 1.6.7
- * - HID Project 2.4.3
- * - IRLremote   1.7.4
+ * - SparkFun Pro Micro, ATmega32u4 (5V, 16MHz)
+ * - Arduino IDE 1.8.5
+ * - HID Project 2.4.4
+ * - IRremote   2.2.3
  * 
  * ISSUES:
- * - IRLremote doesn't work with Logitech Plex Remote profile. Now (ab)using Panasonic TV TX-43CXW754 device template.
- * - Watch dog reset doesn't work, according to Google this is most likely an Arduino bootloader bug.
- * - IRLremote doesn't work with MattairTech MT-DB-U4 1.6.9-mt1
+ * - work in progress, not yet fully tested
+ * - only tested with MCE profile
  */
 // --------GLOBAL FLAGS ---------------
 // enable debugging output over usb
 #define DEBUG_SKETCH
-//#define WATCHDOG
 
 // --------INCLUDES ---------------
-
-#ifdef WATCHDOG
-  #include <avr/wdt.h>
-#endif
 #include <HID-Project.h>
-#include <IRLremote.h>
+
+/* Save resources and processing overhead with changing IRremote.h:
+ * Only DECODE_RC6 is required for MCE remote (saves around 2900 bytes of program storage space)
+#define DECODE_RC5           0
+#define SEND_RC5             0
+#define DECODE_RC6           1
+#define SEND_RC6             0
+#define DECODE_NEC           0
+#define SEND_NEC             0
+#define DECODE_SONY          0
+#define SEND_SONY            0
+#define DECODE_PANASONIC     0
+#define SEND_PANASONIC       0
+#define DECODE_JVC           0
+#define SEND_JVC             0
+#define DECODE_SAMSUNG       0
+#define SEND_SAMSUNG         0
+#define DECODE_WHYNTER       0
+#define SEND_WHYNTER         0
+#define DECODE_AIWA_RC_T501  0
+#define SEND_AIWA_RC_T501    0
+#define DECODE_LG            0
+#define SEND_LG              0
+#define DECODE_SANYO         0
+#define SEND_SANYO           0 // NOT WRITTEN
+#define DECODE_MITSUBISHI    0
+#define SEND_MITSUBISHI      0 // NOT WRITTEN
+#define DECODE_DISH          0 // NOT WRITTEN
+#define SEND_DISH            0
+#define DECODE_SHARP         0 // NOT WRITTEN
+#define SEND_SHARP           0
+#define DECODE_DENON         0
+#define SEND_DENON           0
+*/
+#include <IRremote.h>
+
 #include "Debug.h"
-// either include Panasonic or Sony definitions
-#include "Panasonic.h"
-//#include "Sony.h"
+// include desired IR code to key mapping definitions (MCE, Panasonic, Sony)
+#include "MCE.h"
 
 // --------CONSTANTS ---------------
 
@@ -102,7 +133,8 @@ const CodeMap irToKeyMap[] = {
   {REMOTE_FWD     , 0, KEY_F},
   {REMOTE_PREV    , 0, KEY_QUOTE},         // FIXME doesn't seem to work with non-us keyboard layout
   {REMOTE_SKIP    , 0, KEY_PERIOD},
-  {REMOTE_REPLAY  , 0, KEY_COMMA},
+// TODO remap for MCE remote
+//  {REMOTE_REPLAY  , 0, KEY_COMMA},
   {REMOTE_SUBTITLE, 0, KEY_T},             // toggle subtitles 
   {REMOTE_BLUE    , 0, KEY_O},             // Codec Info
   {REMOTE_RED     , 0, KEY_W},             // Marked as watched / unwatched
@@ -124,6 +156,7 @@ const CodeMap irToKeyMap[] = {
   {REMOTE_MUTE    , 0, KEY_VOLUME_MUTE},
   {REMOTE_VOL_UP  , 0, KEY_VOLUME_UP},
   {REMOTE_VOL_DOWN, 0, KEY_VOLUME_DOWN},
+/* TODO remap for MCE remote
   {REMOTE_F1      , 0, KEY_A},             // Audio delay control
   {REMOTE_F2      , 0, KEY_D},             // Move item down (Playlist editor & Favorites window)
   {REMOTE_F3      , 0, KEY_U},             // Move item up (Playlist editor & Favorites window)  
@@ -131,13 +164,16 @@ const CodeMap irToKeyMap[] = {
   {REMOTE_F5      , 0, KEY_V},             // Teletext / Visualisation settings
   {REMOTE_F6      , 0, KEY_Y},             // Switch/choose player
   {REMOTE_F7      , 0, KEY_HOME},          // Jump to the top of the menu
+*/
   {REMOTE_REC     , 0, KEY_PRINTSCREEN},   // Screenshot
-
+/* TODO remap for MCE remote
   {REMOTE_ARROW_DOWN, KEY_CTRL, KEY_DOWN_ARROW}, // Move subtitles down
   {REMOTE_ARROW_UP  , KEY_CTRL, KEY_UP_ARROW},   // Move subtitles up
+*/
   {REMOTE_F8        , KEY_CTRL, KEY_D},          // boot: ChromeOS    TODO test...
 //{REMOTE_F9        , KEY_CTRL, KEY_W},          // boot: openELEC    TODO test...
 };
+
 
 const int IR_KEY_MAP_SIZE = sizeof(irToKeyMap) / sizeof(CodeMap);
 
@@ -145,13 +181,13 @@ const int IR_KEY_MAP_SIZE = sizeof(irToKeyMap) / sizeof(CodeMap);
 
 unsigned long lastIRValue = 0;  // previously received IR code value
 unsigned long timeKeyDown = 0;  // time of key press initiation
-
-// temporary variables to save latest IR input
-uint8_t IRProtocol = 0;
-uint16_t IRAddress = 0;
-uint32_t IRCommand = 0;
+unsigned long timeLastKeyEvent = 0;  // time of last key press event
 
 //========================================
+
+IRrecv irrecv(RECV_PIN);
+decode_results  results;
+
 
 void setup() {                
     // open debug console
@@ -168,61 +204,46 @@ void setup() {
     BootKeyboard.begin();
     
     // Start the receiver
-    attachInterrupt(digitalPinToInterrupt(RECV_PIN), IRLinterrupt<irType>, CHANGE);
-    
-    #ifdef WATCHDOG
-      // enable watch dog 
-      wdt_enable(WDTO_1S);
-    #endif
+    irrecv.enableIRIn();
 }
 
 //========================================
 
 void loop() {
-#ifdef WATCHDOG  
-    //Test if watchdog interrupt enabled
-    // http://forum.arduino.cc/index.php?topic=295345.msg2628807#msg2628807
-    if (WDTCSR & (1<<WDIE)) {   
-        //Prolong watchdog timer
-        wdt_reset();
-    }
-    //No interrupt enabled - Test if watchdog reset enabled
-    else if (WDTCSR & (1<<WDE)) {
-        //Bootloader about to reset - do not prolong watchdog
-    }
-    //It has ben disabled - Enable and prolong
-    else {
-        //Watchdog disabled - Enable again
-        wdt_enable(WDTO_1S);
-    }
-#endif
+    if (irrecv.decode(&results)) {
 
-    // temporary disable interrupts and print newest input
-    // TODO read up on interrup handling
-    uint8_t oldSREG = SREG;
-    cli();
+        DEBUG_PRINT(results.decode_type);DEBUG_PRINT("/0x");DEBUG_PRINT(results.address, HEX);DEBUG_PRINT("/0x");DEBUG_PRINTLN(results.value, HEX);
 
-    if (IRProtocol) {
-        DEBUG_PRINT(IRProtocol);DEBUG_PRINT("/0x");DEBUG_PRINT(IRAddress, HEX);DEBUG_PRINT("/0x");DEBUG_PRINTLN(IRCommand, HEX);
-        
-        if (IRProtocol == irType) {
-            // check if it's a NEC repeat code
-            if (IRCommand == 0xFFFF) {
-                IRCommand = lastIRValue;
-            } else {
-                lastIRValue = IRCommand;
+        if (results.decode_type == irType) {
+            // handle protocol specific quirks
+            switch(irType) {
+              case RC6:
+                // TODO filter out repeat codes, each code is sent three times with the same toggle bit
+                // eliminate RC6 toggle bit
+                results.value = results.value & 0xFFFF7FFF;
+                break;
+              // check if it's a NEC repeat code
+              case NEC:
+              case PANASONIC:
+                if (results.value == 0xFFFF) {
+                    results.value = lastIRValue;
+                }
+                break;
             }
-            
-            if (IRCommand != lastIRValue) {
+
+            if (results.value != lastIRValue) {
                 // immediately release last key if a different IR value is received. We don't want multiple keys pressed at the same time.
                 releaseKeys(); 
             } 
-            
-            switch (IRCommand) {
+
+            switch (results.value) {
               // special commands
               case REMOTE_POWER_TOGGLE :
-                  DEBUG_PRINTLN("Power toggle");
-                  pushPowerButton();
+                  // simple way to filter out multiple RC6 repeat codes
+                  if (timeLastKeyEvent == 0) {
+                      DEBUG_PRINTLN("Power toggle");
+                      pushPowerButton();
+                  }
                   break;
               case REMOTE_POWER_OFF :
                   DEBUG_PRINT("Power off: ");
@@ -243,11 +264,11 @@ void loop() {
               // keyboard commands
               default :
                   for (int i = 0; i < IR_KEY_MAP_SIZE; i++) {
-                      if (irToKeyMap[i].irCommand == IRCommand) {
+                      if (irToKeyMap[i].irCommand == results.value) {
                           // only press key if not yet pressed
-                          if (timeKeyDown == 0) {
+                          if (timeLastKeyEvent == 0) {
                               KeyboardKeycode keyCode = irToKeyMap[i].keyCode;
-                              DEBUG_PRINT(millis()); DEBUG_PRINT(" Press key: 0x"); DEBUG_PRINT(keyCode, HEX);
+                              DEBUG_PRINT(" Press key: 0x"); DEBUG_PRINT(keyCode, HEX);
 
                               if (irToKeyMap[i].modifier & KEY_CTRL) {
                                 BootKeyboard.press(KEY_LEFT_CTRL);
@@ -266,36 +287,39 @@ void loop() {
                                 DEBUG_PRINT(" + GUI "); 
                               }
                               DEBUG_PRINTLN();
-                              BootKeyboard.press(keyCode);              
+                              BootKeyboard.press(keyCode);
+                              timeKeyDown = millis();
                           }
-                          timeKeyDown = millis();
+                          timeLastKeyEvent = millis();
                           break;
                       }
                   }
-            }
-        }     
-    
+            } // end switch result.value
+        } // end decode_type
+
+        lastIRValue = results.value;
+
+        irrecv.resume(); // Receive the next value
+
     } else {
         // check if it's time to release a previously pressed key
-        if (timeKeyDown > 0 && (millis() - timeKeyDown >= KEY_PRESS_TIME)) {
+        if (timeLastKeyEvent > 0 && (millis() - timeLastKeyEvent >= KEY_PRESS_TIME)) {
             releaseKeys(); 
         }
     }
 
-    IRProtocol = 0;
-    SREG = oldSREG;
-    
-    sei();
-    
     delay(LOOP_DELAY);
 }
 
 //========================================
 
 void releaseKeys() {
-    timeKeyDown = 0;
     BootKeyboard.releaseAll();
-    DEBUG_PRINT(millis()); DEBUG_PRINTLN(" Release keys");   
+    if (timeLastKeyEvent > 0) {
+      DEBUG_PRINT(" Released keys after "); DEBUG_PRINTLN(millis() - timeKeyDown);
+    }
+    timeKeyDown = 0;
+    timeLastKeyEvent = 0;
 }
 
 //========================================
@@ -305,19 +329,7 @@ void pushPowerButton() {
     delay(POWER_BTN_HOLD_TIME);
     digitalWrite(POWER_BTN_PIN, LOW);
     DEBUG_PRINTLN("power button triggered");
+    timeLastKeyEvent = timeKeyDown = millis();
 }
 
 //========================================
-
-// IR decoding callback: update the values to the newest valid input
-void IREvent(uint8_t protocol, uint16_t address, uint32_t command) {
-    // called when directly received a valid IR signal.
-    // do not use Serial inside, it can crash your program!
-    
-    // dont update value if not yet processed
-    if (!IRProtocol) {
-        IRProtocol = protocol;
-        IRAddress = address;
-        IRCommand = command;
-    }
-}
