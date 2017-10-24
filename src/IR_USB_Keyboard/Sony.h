@@ -46,7 +46,7 @@ const decode_type_t  irType = SONY;
 #define IR_SONY_UP           0x0074
 #define IR_SONY_DOWN         0x0075
 
-// Standard Logitech 880 buttons
+//------------ Standard Logitech 880 buttons ---------------------
 #define REMOTE_MUTE         IR_SONY_MUTE
 #define REMOTE_VOL_UP       IR_SONY_VOL_UP
 #define REMOTE_VOL_DOWN     IR_SONY_VOL_DOWN

@@ -1,10 +1,10 @@
 
-const decode_type_t  irType = PANASONIC;
-
+const decode_type_t  irType = NEC;
+// FIXME ir codes are from IRLremote library and do not match IRremote codes!
 // address: 0x2002
-#define IR_PANA_1            0x9C174262
-#define IR_PANA_2            0x757FB4DF
-#define IR_PANA_3            0xB33B4597
+#define IR_PANA_1            0x90100080
+#define IR_PANA_2            0x91110080
+#define IR_PANA_3            0x92120080
 #define IR_PANA_4            0x93130080
 #define IR_PANA_5            0x94140080
 #define IR_PANA_6            0x95150080
@@ -57,8 +57,7 @@ const decode_type_t  irType = PANASONIC;
 #define IR_PANA_TELETEXT     0x82030180
 #define IR_PANA_MEDIAPLAYER  0x22AB0980
 
-
-// Standard Logitech 880 buttons
+//------------ Standard Logitech 880 buttons ---------------------
 #define REMOTE_MUTE         IR_PANA_MUTE
 #define REMOTE_VOL_UP       IR_PANA_VOL_UP
 #define REMOTE_VOL_DOWN     IR_PANA_VOL_DOWN

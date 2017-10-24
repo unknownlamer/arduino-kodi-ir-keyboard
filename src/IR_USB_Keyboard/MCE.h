@@ -1,5 +1,4 @@
 
-//const IRType irType = IR_MCESONIC;
 const decode_type_t  irType = RC6;
 
 // MCE scancodes from https://github.com/torvalds/linux/blob/master/drivers/media/rc/keymaps/rc-rc6-mce.c
@@ -83,15 +82,14 @@ const decode_type_t  irType = RC6;
 #define IR_MCE_POWER_ON       0x800F0429
 #define IR_MCE_POWER_OFF      0x800F042A
 
-
-// Standard Logitech 880 buttons
+//------------ Standard Logitech 880 buttons ---------------------
 #define REMOTE_MUTE         IR_MCE_MUTE
 #define REMOTE_VOL_UP       IR_MCE_VOLUMEUP
 #define REMOTE_VOL_DOWN     IR_MCE_VOLUMEDOWN
-/* TODO
-#define REMOTE_ARROW_DOWN   IR_MCE_VIDEO1
-#define REMOTE_ARROW_UP     IR_MCE_VIDEO2
-*/
+
+#define REMOTE_ARROW_DOWN   IR_MCE_BRIGHTNESSDOWN
+#define REMOTE_ARROW_UP     IR_MCE_BRIGHTNESSUP
+
 #define REMOTE_CH_DOWN      IR_MCE_CHANNELDOWN
 #define REMOTE_CH_UP        IR_MCE_CHANNELUP
 #define REMOTE_PREV         IR_MCE_PREVIOUS
@@ -100,14 +98,14 @@ const decode_type_t  irType = RC6;
 #define REMOTE_LEFT         IR_MCE_LEFT
 #define REMOTE_RIGHT        IR_MCE_RIGHT
 #define REMOTE_OK           IR_MCE_OK
-// TODO
+// TODO test REMOTE_MENU mapping
 #define REMOTE_MENU         IR_MCE_MODE
 #define REMOTE_EXIT         IR_MCE_EXIT
 #define REMOTE_GUIDE        IR_MCE_EPG
 #define REMOTE_INFO         IR_MCE_INFO
 #define REMOTE_STOP         IR_MCE_STOP
 
-//#define REMOTE_REPLAY       IR_MCE_REPLAY
+//#define REMOTE_REPLAY       ?
 #define REMOTE_SKIP         IR_MCE_NEXT
 #define REMOTE_PLAY         IR_MCE_PLAY
 #define REMOTE_REC          IR_MCE_RECORD
@@ -138,13 +136,13 @@ const decode_type_t  irType = RC6;
 #define REMOTE_SUBTITLE     IR_MCE_SUBTITLE
 #define REMOTE_ASPECT       IR_MCE_MEDIA
 
+#define REMOTE_F1           IR_MCE_AUDIO
 /*
-#define REMOTE_F1           IR_MCE_AV
-#define REMOTE_F2           IR_MCE_HDMI2
-#define REMOTE_F3           IR_MCE_HDMI1
-#define REMOTE_F4           IR_MCE_HDMI3
-#define REMOTE_F6           IR_MCE_ASPECT
+#define REMOTE_F2           ?
+#define REMOTE_F3           ?
+#define REMOTE_F4           ?
+#define REMOTE_F7           ?
 */
-#define REMOTE_F5           IR_MCE_TELETEXT
-#define REMOTE_F7           IR_MCE_HOME
+#define REMOTE_F5           IR_MCE_MODE
+#define REMOTE_F6           IR_MCE_PLAYER
 #define REMOTE_F8           IR_MCE_TV
