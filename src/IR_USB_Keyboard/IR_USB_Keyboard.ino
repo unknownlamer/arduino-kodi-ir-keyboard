@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 Markus Zehnder
+Copyright (c) 2016-2017 Markus Zehnder
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,43 +22,38 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/* IR to USB keyboard optimized for KODI openELEC running on Asus Chromebox.
+/* IR to USB keyboard optimized for KODI LibreELEC running on Asus Chromebox.
  * IR device: Logitech Harmony 880 with remote profile: 'Panasonic TV TX-43CXW754'
  * 
+ * Development branch for new IRLremote 2.0.0 library
+ *
  * Tested with: 
  * - Arduino Leonardo & SparkFun Pro Micro, ATmega32u4 (5V, 16MHz)
- * - Arduino IDE 1.6.7
- * - HID Project 2.4.3
- * - IRLremote   1.7.4
+ * - Arduino IDE 1.8.5
+ * - HID Project 2.4.4
+ * - IRLremote   2.0.0
  * 
  * ISSUES:
- * - IRLremote doesn't work with Logitech Plex Remote profile. Now (ab)using Panasonic TV TX-43CXW754 device template.
- * - Watch dog reset doesn't work, according to Google this is most likely an Arduino bootloader bug.
- * - IRLremote doesn't work with MattairTech MT-DB-U4 1.6.9-mt1
+ * - IRLremote doesn't work with Logitech Plex Remote profile with RC6 codes.
+ *   Now (ab)using Panasonic TV TX-43CXW754 device template with NEC codes.
  */
 // --------GLOBAL FLAGS ---------------
 // enable debugging output over usb
 #define DEBUG_SKETCH
-//#define WATCHDOG
 
 // --------INCLUDES ---------------
 
-#ifdef WATCHDOG
-  #include <avr/wdt.h>
-#endif
 #include <HID-Project.h>
 #include <IRLremote.h>
 #include "Debug.h"
-// either include Panasonic or Sony definitions
 #include "Panasonic.h"
-//#include "Sony.h"
 
 // --------CONSTANTS ---------------
 
 // pin assignments
-#define RECV_PIN 7
+#define RECV_PIN        7
 #define POWER_SENSE_PIN 8
-#define POWER_BTN_PIN 9
+#define POWER_BTN_PIN   9
 
 // min 500ms hold time seems to be required  (< 500ms was too short for power on)
 #define POWER_BTN_HOLD_TIME 700
@@ -69,11 +64,16 @@ struct CodeMap {
   KeyboardKeycode keyCode;
 };
 
+// TODO fine tune MIN_KEY_PRESS_TIME to specific setup.
 // Key press time must be slightly higher then the repeat IR code duration. 
-// My Logitech resends the first repeat after 40ms and afterwards every 110ms
-const int KEY_PRESS_TIME = 150;
+// My Logitech resends the first repeat after 40ms and afterwards every 110ms.
+// The value must be high enough to correctly handle repeat IR codes (i.e. not releasing the pressed keyboard key while still receiving a repeat code)
+// but not too high to trigger a repeated keyboard key for a single IR code and create a sluggish feeling.
+const int KEY_PRESS_TIME = 300;
 
-const int LOOP_DELAY = KEY_PRESS_TIME / 3;
+// TODO fine tune LOOP_DELAY to specific setup.
+// Try to increase delay to improve reliability, decrease if key repeat handling is sluggish
+const int LOOP_DELAY = 100;
 
 // IR code to key mapping
 const uint8_t KEY_CTRL  = 1;
@@ -146,11 +146,6 @@ const int IR_KEY_MAP_SIZE = sizeof(irToKeyMap) / sizeof(CodeMap);
 unsigned long lastIRValue = 0;  // previously received IR code value
 unsigned long timeKeyDown = 0;  // time of key press initiation
 
-// temporary variables to save latest IR input
-uint8_t IRProtocol = 0;
-uint16_t IRAddress = 0;
-uint32_t IRCommand = 0;
-
 //========================================
 
 void setup() {                
@@ -168,125 +163,95 @@ void setup() {
     BootKeyboard.begin();
     
     // Start the receiver
-    attachInterrupt(digitalPinToInterrupt(RECV_PIN), IRLinterrupt<irType>, CHANGE);
-    
-    #ifdef WATCHDOG
-      // enable watch dog 
-      wdt_enable(WDTO_1S);
-    #endif
+    if (!IRLremote.begin(RECV_PIN)) {
+        DEBUG_PRINTLN(F("Invalid RECV_PIN"));
+    }
 }
 
 //========================================
 
 void loop() {
-#ifdef WATCHDOG  
-    //Test if watchdog interrupt enabled
-    // http://forum.arduino.cc/index.php?topic=295345.msg2628807#msg2628807
-    if (WDTCSR & (1<<WDIE)) {   
-        //Prolong watchdog timer
-        wdt_reset();
-    }
-    //No interrupt enabled - Test if watchdog reset enabled
-    else if (WDTCSR & (1<<WDE)) {
-        //Bootloader about to reset - do not prolong watchdog
-    }
-    //It has ben disabled - Enable and prolong
-    else {
-        //Watchdog disabled - Enable again
-        wdt_enable(WDTO_1S);
-    }
-#endif
+    if (IRLremote.available()) {
+        auto data = IRLremote.read();
+        DEBUG_PRINT(millis()); DEBUG_PRINT(" "); DEBUG_PRINT(data.address, HEX);DEBUG_PRINT("/0x");DEBUG_PRINTLN(data.command, HEX);
 
-    // temporary disable interrupts and print newest input
-    // TODO read up on interrup handling
-    uint8_t oldSREG = SREG;
-    cli();
+        // check if it's a NEC repeat code. TODO still required with IRLremote 2?
+        if (data.command == 0xFFFF) {
+            data.command = lastIRValue;
+        }
 
-    if (IRProtocol) {
-        DEBUG_PRINT(IRProtocol);DEBUG_PRINT("/0x");DEBUG_PRINT(IRAddress, HEX);DEBUG_PRINT("/0x");DEBUG_PRINTLN(IRCommand, HEX);
+        if (data.command != lastIRValue) {
+            DEBUG_PRINTLN("IRValue changed: releasing keys");
+            // immediately release last key if a different IR value is received. We don't want multiple keys pressed at the same time.
+            releaseKeys();
+        }
         
-        if (IRProtocol == irType) {
-            // check if it's a NEC repeat code
-            if (IRCommand == 0xFFFF) {
-                IRCommand = lastIRValue;
-            } else {
-                lastIRValue = IRCommand;
-            }
-            
-            if (IRCommand != lastIRValue) {
-                // immediately release last key if a different IR value is received. We don't want multiple keys pressed at the same time.
-                releaseKeys(); 
-            } 
-            
-            switch (IRCommand) {
-              // special commands
-              case REMOTE_POWER_TOGGLE :
-                  DEBUG_PRINTLN("Power toggle");
-                  pushPowerButton();
-                  break;
-              case REMOTE_POWER_OFF :
-                  DEBUG_PRINT("Power off: ");
-                  if (digitalRead(POWER_SENSE_PIN) == HIGH) {
-                    pushPowerButton();
-                  } else {
-                    DEBUG_PRINTLN("ignored, device already off");
-                  }
-                  break;
-              case REMOTE_POWER_ON :
-                  DEBUG_PRINT("Power on: ");
-                  if (digitalRead(POWER_SENSE_PIN) == LOW) {
-                    pushPowerButton();
-                  } else {
-                    DEBUG_PRINTLN("ignored, device already on");
-                  }
-                  break;
-              // keyboard commands
-              default :
-                  for (int i = 0; i < IR_KEY_MAP_SIZE; i++) {
-                      if (irToKeyMap[i].irCommand == IRCommand) {
-                          // only press key if not yet pressed
-                          if (timeKeyDown == 0) {
-                              KeyboardKeycode keyCode = irToKeyMap[i].keyCode;
-                              DEBUG_PRINT(millis()); DEBUG_PRINT(" Press key: 0x"); DEBUG_PRINT(keyCode, HEX);
+        switch (data.command) {
+          // special commands
+          case REMOTE_POWER_TOGGLE :
+              DEBUG_PRINTLN("Power toggle");
+              pushPowerButton();
+              break;
+          case REMOTE_POWER_OFF :
+              DEBUG_PRINT("Power off: ");
+              if (digitalRead(POWER_SENSE_PIN) == HIGH) {
+                pushPowerButton();
+              } else {
+                DEBUG_PRINTLN("ignored, device already off");
+              }
+              break;
+          case REMOTE_POWER_ON :
+              DEBUG_PRINT("Power on: ");
+              if (digitalRead(POWER_SENSE_PIN) == LOW) {
+                pushPowerButton();
+              } else {
+                DEBUG_PRINTLN("ignored, device already on");
+              }
+              break;
+          // keyboard commands
+          default :
+              for (int i = 0; i < IR_KEY_MAP_SIZE; i++) {
+                  if (irToKeyMap[i].irCommand == data.command) {
+                      // only press key if not yet pressed
+                      if (timeKeyDown == 0) {
+                          KeyboardKeycode keyCode = irToKeyMap[i].keyCode;
+                          DEBUG_PRINT(millis()); DEBUG_PRINT(" Press key: 0x"); DEBUG_PRINT(keyCode, HEX);
 
-                              if (irToKeyMap[i].modifier & KEY_CTRL) {
-                                BootKeyboard.press(KEY_LEFT_CTRL);
-                                DEBUG_PRINT(" + CTRL "); 
-                              }
-                              if (irToKeyMap[i].modifier & KEY_ALT) {
-                                BootKeyboard.press(KEY_LEFT_ALT); 
-                                DEBUG_PRINT(" + ALT "); 
-                              }
-                              if (irToKeyMap[i].modifier & KEY_SHIFT) {
-                                BootKeyboard.press(KEY_LEFT_SHIFT); 
-                                DEBUG_PRINT(" + SHIFT "); 
-                              }
-                              if (irToKeyMap[i].modifier & KEY_GUI) {
-                                BootKeyboard.press(KEY_LEFT_GUI); 
-                                DEBUG_PRINT(" + GUI "); 
-                              }
-                              DEBUG_PRINTLN();
-                              BootKeyboard.press(keyCode);              
+                          if (irToKeyMap[i].modifier & KEY_CTRL) {
+                            BootKeyboard.press(KEY_LEFT_CTRL);
+                            DEBUG_PRINT(" + CTRL ");
                           }
-                          timeKeyDown = millis();
-                          break;
+                          if (irToKeyMap[i].modifier & KEY_ALT) {
+                            BootKeyboard.press(KEY_LEFT_ALT);
+                            DEBUG_PRINT(" + ALT ");
+                          }
+                          if (irToKeyMap[i].modifier & KEY_SHIFT) {
+                            BootKeyboard.press(KEY_LEFT_SHIFT);
+                            DEBUG_PRINT(" + SHIFT ");
+                          }
+                          if (irToKeyMap[i].modifier & KEY_GUI) {
+                            BootKeyboard.press(KEY_LEFT_GUI);
+                            DEBUG_PRINT(" + GUI ");
+                          }
+                          DEBUG_PRINTLN();
+                          BootKeyboard.press(keyCode);
                       }
+                      timeKeyDown = millis();
+                      break;
                   }
-            }
-        }     
-    
+              }
+        }
+
+        lastIRValue = data.command;
+
     } else {
         // check if it's time to release a previously pressed key
         if (timeKeyDown > 0 && (millis() - timeKeyDown >= KEY_PRESS_TIME)) {
+            DEBUG_PRINT(millis()); DEBUG_PRINTLN(" Keypress timeout: releasing keys");
             releaseKeys(); 
         }
     }
 
-    IRProtocol = 0;
-    SREG = oldSREG;
-    
-    sei();
-    
     delay(LOOP_DELAY);
 }
 
@@ -295,7 +260,6 @@ void loop() {
 void releaseKeys() {
     timeKeyDown = 0;
     BootKeyboard.releaseAll();
-    DEBUG_PRINT(millis()); DEBUG_PRINTLN(" Release keys");   
 }
 
 //========================================
@@ -309,15 +273,3 @@ void pushPowerButton() {
 
 //========================================
 
-// IR decoding callback: update the values to the newest valid input
-void IREvent(uint8_t protocol, uint16_t address, uint32_t command) {
-    // called when directly received a valid IR signal.
-    // do not use Serial inside, it can crash your program!
-    
-    // dont update value if not yet processed
-    if (!IRProtocol) {
-        IRProtocol = protocol;
-        IRAddress = address;
-        IRCommand = command;
-    }
-}

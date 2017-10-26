@@ -1,5 +1,5 @@
 
-const IRType irType = IR_PANASONIC;
+CPanasonic IRLremote;
 
 // address: 0x2002
 #define IR_PANA_1            0x90100080

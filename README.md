@@ -2,6 +2,8 @@
  
 Kodi optimized infrared USB keyboard for an Asus Chromebox running openELEC.
 
+**DEVELOPMENT BRANCH for new IRLremote library 2.0.0**
+
 IR device: Logitech Harmony 880 with remote profile: 'Panasonic TV TX-43CXW754' (NEC IR codes)
 
 See [development branch mce-remote](https://github.com/zehnm/arduino-kodi-ir-keyboard/tree/mce-remote) for an MCE based version with [IRremote](https://github.com/z3t0/Arduino-IRremote).
@@ -9,9 +11,9 @@ See [development branch mce-remote](https://github.com/zehnm/arduino-kodi-ir-key
 
 Tested with: 
 - Arduino Leonardo & SparkFun Pro Micro, ATmega32u4 (5V, 16MHz)
-- Arduino IDE 1.6.7
-- [HID Project](https://github.com/NicoHood/HID "HID Project") 2.4.3
-- [IRLremote](https://github.com/NicoHood/IRLremote "IRLremote") 1.7.4
+- Arduino IDE 1.8.5
+- [HID Project](https://github.com/NicoHood/HID "HID Project") 2.4.4
+- [IRLremote](https://github.com/NicoHood/IRLremote "IRLremote") 2.0.0
 
 ## Features
 - Full Kodi control (at least what I use ;)
@@ -23,7 +25,6 @@ Tested with:
 - Boot protocol mode (tested on a MacMini)
 
 ## Issues
-- Watch dog reset doesn't work, according to Google this is most likely an Arduino bootloader bug.
 - KEY_QUOTE doesn't work with non-us keyboard layout
   
 ## TODO

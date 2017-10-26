@@ -1,4 +1,4 @@
-const IRType irType = IR_SONY12;
+CSony IRLremote;  // not yet available in IRLremote 2.0.0
 
 // The Sony device was just used for testing the device specific IR codes abstraction
 #define IR_SONY_1            0x0000
