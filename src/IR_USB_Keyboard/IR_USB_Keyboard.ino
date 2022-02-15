@@ -43,7 +43,7 @@ SOFTWARE.
 #define DEBUG_SKETCH
 
 // --------INCLUDES ---------------
-#include <HID-Project.h>
+#include "KeyboardConfig.h"
 
 /* Save resources and processing overhead by editing <IRremote.h>:
  * Only DECODE_RC6 is required for MCE remote (saves around 2900 bytes of program storage space)
