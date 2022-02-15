@@ -1,7 +1,8 @@
-/*
+/*  -*- mode: c++; c-basic-offset: 4; -*-
 The MIT License (MIT)
 
 Copyright (c) 2016 Markus Zehnder
+Copyright (c) 2022 Clinton Ebadi <clinton@unknownlamer.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -30,9 +31,11 @@ SOFTWARE.
  * 
  * Tested with: 
  * - SparkFun Pro Micro, ATmega32u4 (5V, 16MHz)
- * - Arduino IDE 1.8.5
+ * - Teensy 3.2, ARM Cortex-M4 (3.3V, 96MHz)
+ * - Arduino IDE 1.8.15
  * - HID Project 2.4.4 https://github.com/NicoHood/HID
- * - IRremote    2.2.3 https://github.com/z3t0/Arduino-IRremote
+ * - IRremote    3.5.2 https://github.com/Arduino-IRremote/Arduino-IRremote
+ * - Teensyduino 1.56  https://www.pjrc.com/teensy/td_download.html
  * 
  * ISSUES:
  * - work in progress, not yet fully tested
@@ -49,7 +52,7 @@ SOFTWARE.
  * Only DECODE_RC6 is required for MCE remote (saves around 2900 bytes of program storage space)
  * i.e. set all unused protocols to 0: #define SEND_<proto> 0
  */
-#include <IRremote.h>
+#include <IRremote.hpp>
 
 #include "Debug.h"
 #include "MCE.h"
@@ -78,7 +81,7 @@ struct CodeMap {
 const int MIN_KEY_PRESS_TIME = 150;
 
 // TODO fine tune LOOP_DELAY to specific setup.
-// irrecv.decode should return a minimum of results.decode_type == UNKNOWN
+// IrReceiver.decode should return a minimum of IrReceiver.decodedIRData.protocol == UNKNOWN
 // Try to increase delay to improve reliability, decrease if key repeat handling is sluggish
 const int LOOP_DELAY = 100;
 
@@ -157,14 +160,7 @@ unsigned long lastIRValue = 0;          // previously received IR code value for
 unsigned long lastOriginalIRValue = 0;  // previously received IR code value in its original form (with toggle bit)
 unsigned long timeKeyDown = 0;          // time of key press initiation
 unsigned long timeLastKeyEvent = 0;     // time of last key press event
-
-boolean decoded;
-
-//========================================
-// IR library specific (IRremote / IRLremote)
-// TODO provide option to either use IRLremote or IRremote
-IRrecv irrecv(RECV_PIN);
-decode_results  results;
+boolean decoded = false;                // whether decoded IR data is available
 
 //========================================
 
@@ -183,24 +179,29 @@ void setup() {
     BootKeyboard.begin();
     
     // Start the receiver
-    irrecv.enableIRIn();
+    #ifdef DEBUG_SKETCH
+      IrReceiver.begin(RECV_PIN, ENABLE_LED_FEEDBACK);
+    #else
+      IrReceiver.begin(RECV_PIN, DISABLE_LED_FEEDBACK);
+    #endif
 }
 
 //========================================
 
 void loop() {
     // Poll IR receiver for new decoded value
-    decoded = irrecv.decode(&results);
+    decoded = IrReceiver.decode();
 
     if (preProcessIrData()) {
-        handleIrValue(results.value);
+      handleIrValue(IrReceiver.decodedIRData.decodedRawData);
     }
 
     handlePressedKeys();
 
     // continue IR decoding
     if (decoded) {
-        irrecv.resume();
+      IrReceiver.resume();
+      decoded = false;
     }
 
     delay(LOOP_DELAY);
@@ -223,12 +224,12 @@ boolean preProcessIrData() {
       return false;
     }
     DEBUG_PRINT(millis()); DEBUG_PRINT(" ");
-    DEBUG_PRINT(results.decode_type);DEBUG_PRINT("/0x");DEBUG_PRINT(results.address, HEX);DEBUG_PRINT("/0x");DEBUG_PRINTLN(results.value, HEX);
+    DEBUG_PRINT(IrReceiver.decodedIRData.protocol);DEBUG_PRINT("/0x");DEBUG_PRINT(IrReceiver.decodedIRData.address, HEX);DEBUG_PRINT("/0x");DEBUG_PRINTLN(IrReceiver.decodedIRData.decodedRawData, HEX);
 
     // only process the IR protocol we're interested in
-    if (results.decode_type != irType) {
-      results.value = 0;
-      // HACK: prolong hold time to avoid keyboard key release while holding a remote key. Improves reliability for sporadic results.decode_type == UNKNOWN
+    if (IrReceiver.decodedIRData.protocol != irType) {
+      IrReceiver.decodedIRData.decodedRawData = 0;
+      // HACK: prolong hold time to avoid keyboard key release while holding a remote key. Improves reliability for sporadic IrReceiver.decodedIRData.protocol == UNKNOWN
       timeLastKeyEvent = millis();
       return false;
     }
@@ -246,19 +247,19 @@ boolean preProcessIrData() {
          * When receiving with the IRremote library, you will receive one of two different codes, so you must
          * clear out the toggle bit."
          */
-        if (results.value == lastOriginalIRValue) {
+        if (IrReceiver.decodedIRData.decodedRawData == lastOriginalIRValue) {
           handleRepeatIrCode();
           return  false;
         } else {
           // new remote key press
-          lastOriginalIRValue = results.value;
+          lastOriginalIRValue = IrReceiver.decodedIRData.decodedRawData;
         }
         // eliminate RC6 toggle bit
-        results.value = results.value & 0xFFFF7FFF;
+        IrReceiver.decodedIRData.decodedRawData = IrReceiver.decodedIRData.decodedRawData & 0xFFFF7FFF;
         break;
       // check if it's a NEC repeat code
       case NEC:
-        if (results.value == REPEAT) {
+        if (IrReceiver.decodedIRData.decodedRawData == REPEAT) {
             handleRepeatIrCode();
             return false;
         }
@@ -269,7 +270,7 @@ boolean preProcessIrData() {
 }
 
 void handleRepeatIrCode() {
-    results.value = lastIRValue;
+    IrReceiver.decodedIRData.decodedRawData = lastIRValue;
     timeLastKeyEvent = millis(); // prolong hold time to avoid keyboard key release
 }
 

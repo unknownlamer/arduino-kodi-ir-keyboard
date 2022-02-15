@@ -1,3 +1,6 @@
+// FIXME unclear if ir codes are from IRLremote library, and if they
+// are not they are IRremote 2.x (MSB) instead of IRremote 3.x (LSB)
+// codes!
 
 const decode_type_t  irType = SONY;
 
