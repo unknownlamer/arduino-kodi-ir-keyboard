@@ -57,7 +57,7 @@ SOFTWARE.
 #include <IRremote.hpp>
 
 #include "Debug.h"
-//#define CUSTOM_KEYMAP_INCLUDE "CustomKeymap.h" // Custom IR -> Keyboard code map
+#define CUSTOM_KEYMAP_INCLUDE "INT422Keymap.h" // Custom IR -> Keyboard code map
 #include "RemoteKeymap.h" // Mapping of received IR values to keyboard commands
 
 // --------CONSTANTS ---------------
