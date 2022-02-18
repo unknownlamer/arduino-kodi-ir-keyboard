@@ -48,9 +48,11 @@ SOFTWARE.
 // --------INCLUDES ---------------
 #include "KeyboardConfig.h"
 
-/* Save resources and processing overhead by editing <IRremote.h>:
- * Only DECODE_RC6 is required for MCE remote (saves around 2900 bytes of program storage space)
- * i.e. set all unused protocols to 0: #define SEND_<proto> 0
+/* Save resources and processing overhead by setting compile options before including IRremote:
+ *  https://github.com/Arduino-IRremote/Arduino-IRremote#compile-options--macros-for-this-library
+ * Only DECODE_RC6 is required for MCE and INT422 remotes
+ * e.g. can likely omit higher overhead protocols:
+ * #define EXCLUDE_EXOTIC_PROTOCOLS 0 (saves around 2000 bytes program space)
  */
 #include <IRremote.hpp>
 
