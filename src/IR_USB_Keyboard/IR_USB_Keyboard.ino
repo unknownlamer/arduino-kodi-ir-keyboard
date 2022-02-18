@@ -297,6 +297,7 @@ void handleIrValue(unsigned long irValue) {
           DEBUG_PRINTLN("Power toggle");
           pushPowerButton();
           break;
+#ifdef REMOTE_POWER_OFF
       case REMOTE_POWER_OFF :
           DEBUG_PRINT("Power off: ");
           if (digitalRead(POWER_SENSE_PIN) == HIGH) {
@@ -305,6 +306,8 @@ void handleIrValue(unsigned long irValue) {
             DEBUG_PRINTLN("ignored, device already off");
           }
           break;
+#endif
+#ifdef REMOTE_POWER_ON
       case REMOTE_POWER_ON :
           DEBUG_PRINT("Power on: ");
           if (digitalRead(POWER_SENSE_PIN) == LOW) {
@@ -313,6 +316,7 @@ void handleIrValue(unsigned long irValue) {
             DEBUG_PRINTLN("ignored, device already on");
           }
           break;
+#endif
 
       // keyboard commands
       default :
