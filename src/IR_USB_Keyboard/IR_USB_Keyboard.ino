@@ -32,7 +32,7 @@ SOFTWARE.
  * Tested with: 
  * - SparkFun Pro Micro, ATmega32u4 (5V, 16MHz)
  * - Teensy 3.2, ARM Cortex-M4 (3.3V, 96MHz)
- * - Arduino IDE 1.8.15
+ * - Arduino IDE 1.8.19
  * - HID Project 2.4.4 https://github.com/NicoHood/HID
  * - IRremote    3.5.2 https://github.com/Arduino-IRremote/Arduino-IRremote
  * - Teensyduino 1.56  https://www.pjrc.com/teensy/td_download.html
@@ -46,8 +46,6 @@ SOFTWARE.
 #define DEBUG_SKETCH
 
 // --------INCLUDES ---------------
-#include "KeyboardConfig.h"
-
 /* Save resources and processing overhead by setting compile options before including IRremote:
  *  https://github.com/Arduino-IRremote/Arduino-IRremote#compile-options--macros-for-this-library
  * Only DECODE_RC6 is required for MCE and INT422 remotes
@@ -57,7 +55,8 @@ SOFTWARE.
 #include <IRremote.hpp>
 
 #include "Debug.h"
-#include "MCE.h"
+//#define CUSTOM_KEYMAP_INCLUDE "CustomKeymap.h" // Custom IR -> Keyboard code map
+#include "RemoteKeymap.h" // Mapping of received IR values to keyboard commands
 
 // --------CONSTANTS ---------------
 
@@ -69,13 +68,6 @@ SOFTWARE.
 // min 500ms hold time seems to be required  (< 500ms was too short for power on)
 const int POWER_BTN_HOLD_TIME = 700;
 
-// Mapping of received IR values to keyboard commands
-struct CodeMap {
-  unsigned long   irCommand;  // received IR value
-  byte            modifier;   // keyboard modifier to send
-  KeyboardKeycode keyCode;    // keyboard key code to send
-};
-
 // TODO fine tune MIN_KEY_PRESS_TIME to specific setup.
 // Key press time must be slightly higher then the repeat IR code duration. 
 // My Logitech resends the first repeat after 40ms and afterwards every 110ms.
@@ -86,75 +78,6 @@ const int MIN_KEY_PRESS_TIME = 150;
 // IrReceiver.decode should return a minimum of IrReceiver.decodedIRData.protocol == UNKNOWN
 // Try to increase delay to improve reliability, decrease if key repeat handling is sluggish
 const int LOOP_DELAY = 100;
-
-// IR code to key mapping
-const byte KEY_CTRL  = 1;
-const byte KEY_ALT   = 2;
-const byte KEY_SHIFT = 4;
-const byte KEY_GUI   = 8;
-
-// Kodi keyboard controls: http://kodi.wiki/view/Keyboard_controls
-const CodeMap irToKeyMap[] = {
-  {REMOTE_LEFT    , 0, KEY_LEFT_ARROW},
-  {REMOTE_RIGHT   , 0, KEY_RIGHT_ARROW},
-  {REMOTE_UP      , 0, KEY_UP_ARROW},
-  {REMOTE_DOWN    , 0, KEY_DOWN_ARROW},
-  {REMOTE_OK      , 0, KEY_RETURN},
-  {REMOTE_ENTER   , 0, KEY_TAB},           // Fullscreen playback
-  {REMOTE_MENU    , 0, KEY_C},
-  {REMOTE_CLEAR   , 0, KEY_BACKSPACE},
-  {REMOTE_EXIT    , 0, KEY_ESC},
-  {REMOTE_GUIDE   , 0, KEY_E},
-  {REMOTE_INFO    , 0, KEY_I},
-  {REMOTE_STOP    , 0, KEY_X},
-  {REMOTE_PLAY    , 0, KEY_P},
-  {REMOTE_PAUSE   , 0, KEY_SPACE},
-  {REMOTE_REC     , 0, KEY_B},
-  {REMOTE_REW     , 0, KEY_R},
-  {REMOTE_FWD     , 0, KEY_F},
-  {REMOTE_PREV    , 0, KEY_QUOTE},         // FIXME doesn't seem to work with non-us keyboard layout
-  {REMOTE_SKIP    , 0, KEY_PERIOD},
-// TODO remap for MCE remote
-//  {REMOTE_REPLAY  , 0, KEY_COMMA},
-  {REMOTE_SUBTITLE, 0, KEY_T},             // toggle subtitles 
-  {REMOTE_BLUE    , 0, KEY_O},             // Codec Info
-  {REMOTE_RED     , 0, KEY_W},             // Marked as watched / unwatched
-  {REMOTE_GREEN   , 0, KEY_S},             // shutdown / suspend / reboot menu
-  {REMOTE_YELLOW  , 0, KEY_DELETE},
-  {REMOTE_1       , 0, KEY_1},
-  {REMOTE_2       , 0, KEY_2},
-  {REMOTE_3       , 0, KEY_3},
-  {REMOTE_4       , 0, KEY_4},
-  {REMOTE_5       , 0, KEY_5},
-  {REMOTE_6       , 0, KEY_6},
-  {REMOTE_7       , 0, KEY_7},
-  {REMOTE_8       , 0, KEY_8},
-  {REMOTE_9       , 0, KEY_9},
-  {REMOTE_0       , 0, KEY_0},
-  {REMOTE_CH_UP   , 0, KEY_PAGE_UP},       // PgUp / Skip to next queued video or next chapter if no videos are queued. / Increase Rating
-  {REMOTE_CH_DOWN , 0, KEY_PAGE_DOWN},     // PgDown / Skip to previous queued video or previous chapter if no videos are queued. / Decrease Rating
-  {REMOTE_ASPECT  , 0, KEY_Z},             // Zoom/aspect ratio
-  {REMOTE_MUTE    , 0, KEY_VOLUME_MUTE},
-  {REMOTE_VOL_UP  , 0, KEY_VOLUME_UP},
-  {REMOTE_VOL_DOWN, 0, KEY_VOLUME_DOWN},
-  {REMOTE_F1      , 0, KEY_A},             // Audio delay control
-/* TODO function key mappings for MCE remote
-  {REMOTE_F2      , 0, KEY_D},             // Move item down (Playlist editor & Favorites window)
-  {REMOTE_F3      , 0, KEY_U},             // Move item up (Playlist editor & Favorites window)  
-  {REMOTE_F4      , 0, KEY_Q},             // Queue
-  {REMOTE_F7      , 0, KEY_HOME},          // Jump to the top of the menu
-*/
-  {REMOTE_F5      , 0, KEY_V},             // Teletext / Visualisation settings
-  {REMOTE_F6      , 0, KEY_Y},             // Switch/choose player
-  {REMOTE_REC     , 0, KEY_PRINTSCREEN},   // Screenshot
-  {REMOTE_ARROW_DOWN, KEY_CTRL, KEY_DOWN_ARROW}, // Move subtitles down
-  {REMOTE_ARROW_UP  , KEY_CTRL, KEY_UP_ARROW},   // Move subtitles up
-//{REMOTE_F8        , KEY_CTRL, KEY_D},          // boot: ChromeOS    TODO test...
-//{REMOTE_F9        , KEY_CTRL, KEY_W},          // boot: openELEC    TODO test...
-};
-
-
-const int IR_KEY_MAP_SIZE = sizeof(irToKeyMap) / sizeof(CodeMap);
 
 //------------ VARIABLES ---------------------
 
