@@ -44,6 +44,8 @@ SOFTWARE.
 // --------GLOBAL FLAGS ---------------
 // enable debugging output over usb
 #define DEBUG_SKETCH
+// enable power control and special behavior for REMOTE_POWER_* buttons
+#define ENABLE_POWER_CONTROL
 
 // --------INCLUDES ---------------
 /* Save resources and processing overhead by setting compile options before including IRremote:
@@ -97,9 +99,11 @@ void setup() {
     #endif
     DEBUG_PRINTLN("Chromebox_REMOTE_USB_Keyboard");
 
+ #ifdef ENABLE_POWER_CONTROL
     pinMode(POWER_SENSE_PIN, INPUT); 
     pinMode(POWER_BTN_PIN, OUTPUT); 
-    
+#endif
+
     // initialize control over the keyboard:
     BootKeyboard.begin();
     
@@ -216,6 +220,7 @@ void handleIrValue(unsigned long irValue) {
 
     switch (irValue) {
       // special commands
+#ifdef ENABLE_POWER_CONTROL
       case REMOTE_POWER_TOGGLE :
           DEBUG_PRINTLN("Power toggle");
           pushPowerButton();
@@ -240,7 +245,7 @@ void handleIrValue(unsigned long irValue) {
           }
           break;
 #endif
-
+#endif
       // keyboard commands
       default :
           for (int i = 0; i < IR_KEY_MAP_SIZE; i++) {
@@ -310,6 +315,7 @@ void releaseKeys() {
  * Push power button for defined time in POWER_BTN_HOLD_TIME.
  * Key event times are set to current timestamp.
  */
+#ifdef ENABLE_POWER_CONTROL
 void pushPowerButton() {
     timeLastKeyEvent = timeKeyDown = millis();
     digitalWrite(POWER_BTN_PIN, HIGH);
@@ -317,5 +323,6 @@ void pushPowerButton() {
     digitalWrite(POWER_BTN_PIN, LOW);
     DEBUG_PRINTLN("power button triggered");
 }
+#endif
 
 //========================================
