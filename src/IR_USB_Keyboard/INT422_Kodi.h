@@ -121,13 +121,13 @@ const decode_type_t  irType = RC6;
 #define REMOTE_ASPECT       IR_INT422_ZOOM
 
 // Probably nonsensical
-#define REMOTE_F1           IR_INT422_CIRCLE
-/*
-#define REMOTE_F2           ?
-#define REMOTE_F3           ?
-#define REMOTE_F4           ?
+#define REMOTE_F1           IR_INT422_STAR
+#define REMOTE_F2           IR_INT422_CIRCLE
+#define REMOTE_F3           IR_INT422_TRIANGLE
+#define REMOTE_F4           IR_INT422_DIAMOND
+#define REMOTE_F5           IR_INT422_SQUARE
+/* No physical buttons available for these
+#define REMOTE_F6           ?
 #define REMOTE_F7           ?
+#define REMOTE_F8           ?
 */
-#define REMOTE_F5           IR_INT422_TRIANGLE
-#define REMOTE_F6           IR_INT422_DIAMOND
-#define REMOTE_F8           IR_INT422_SQUARE
