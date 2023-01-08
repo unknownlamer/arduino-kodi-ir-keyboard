@@ -80,7 +80,7 @@ const int MIN_KEY_PRESS_TIME = 150;
 // TODO fine tune LOOP_DELAY to specific setup.
 // IrReceiver.decode should return a minimum of IrReceiver.decodedIRData.protocol == UNKNOWN
 // Try to increase delay to improve reliability, decrease if key repeat handling is sluggish
-const int LOOP_DELAY = 100;
+const int LOOP_DELAY = 0;
 
 //------------ VARIABLES ---------------------
 
