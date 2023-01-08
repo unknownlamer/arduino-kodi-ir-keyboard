@@ -52,8 +52,9 @@ SOFTWARE.
  *  https://github.com/Arduino-IRremote/Arduino-IRremote#compile-options--macros-for-this-library
  * Only DECODE_RC6 is required for MCE and INT422 remotes
  * e.g. can likely omit higher overhead protocols:
- * #define EXCLUDE_EXOTIC_PROTOCOLS 0 (saves around 2000 bytes program space)
+ * #define EXCLUDE_EXOTIC_PROTOCOLS (saves around 2000 bytes program space)
  */
+#define EXCLUDE_EXOTIC_PROTOCOLS
 #include <IRremote.hpp>
 
 #include "Debug.h"
